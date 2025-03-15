@@ -1,8 +1,8 @@
 #include"main.h"
+#include <filesystem>
 void tcpInit(MyTcpServer& tcp_var, const int port, const char* addr) {
 	tcp_var.openServer(port, addr);
 }
-
 Prossess::Prossess()
 {
 }
@@ -160,38 +160,37 @@ int Prossess::loadParams() {
 	//}		 
 	camParams = { 
 		{
-			"192.168.8.145",
+			"192.168.8.160",
 			"admin",
-			"jkrobot2022",
+			"jkrobot@",
 			8000,
 			"camera1"
 		},
 		{
-			"192.168.8.146",
+			"192.168.8.161",
 			"admin",
-			"jkrobot2022",
+			"jkrobot@",
 			8000,
 			"camera2"
-		} 
+		}
 	};
-	// TODO: 5个的参数
-
-	// 每个相机的警告区和危险区，注意点要按顺时针排列
 	WarningRoi temp_warningRoi;
-	temp_warningRoi.roi_points = { _Point(100,100),_Point(900,100),_Point(1000,300),_Point(900,600),_Point(100,700) };
+	temp_warningRoi.roi_points = { _Point(205, 130),_Point(1056, 141),_Point(944, 603),_Point(497, 582),_Point(198, 510) };
 	warning_roi.push_back(temp_warningRoi);
-	temp_warningRoi.roi_points = { _Point(100,100),_Point(900,100),_Point(1000,300),_Point(900,600),_Point(100,700) };
+	temp_warningRoi.roi_points = { _Point(306, 130),_Point(744, 152),_Point(731, 380),_Point(350, 392) };
 	warning_roi.push_back(temp_warningRoi);
+
 
 	DangerRoi temp_dangerRoi;
 	vector<DangerRoi>temp_v_dangerRoi;
-	temp_dangerRoi.roi_points = { _Point(150,150),_Point(800,150),_Point(900,300),_Point(800,500),_Point(100,600) };
+	temp_dangerRoi.roi_points = { _Point(241, 121),_Point(1004, 157),_Point(1042, 209),_Point(952, 578),_Point(268, 496) };
 	temp_v_dangerRoi.push_back(temp_dangerRoi);
 	danger_roi.push_back(temp_v_dangerRoi);
-	temp_dangerRoi.roi_points = { _Point(150,150),_Point(800,150),_Point(900,300),_Point(800,500),_Point(100,600) };
+	temp_dangerRoi.roi_points = { _Point(443, 195),_Point(722, 264),_Point(729, 424),_Point(401, 402) };
 	temp_v_dangerRoi.resize(0);
 	temp_v_dangerRoi.push_back(temp_dangerRoi);
 	danger_roi.push_back(temp_v_dangerRoi);
+
 	return 0;
 }
 
@@ -219,13 +218,12 @@ int Prossess::iniPeopleMonitor() {
 		else
 		{
 			cout << "相机" << i + 1 << ": " << camParams[i].address << " " << camParams[i].password << " " << camParams[i].port << " " << camParams[i].username << " " << "无法正确配置相机，请检查相机参数" << endl;
-			return -1;
+			return 0;
 		}
 		Sleep(5000); // 暂停一段时间，等待预览开始
 		//string windowNames[2] = { "jk1","jk2" };
 	}
 	cout << "开始初始化行人监控线程..." << endl;
-	// 多线程监控，一个相机对应一个线程处理采图与检测任务
 	for (int i = 0; i < camParams.size(); ++i) {
 		camThreads[i] = thread(&Prossess::GrabImage, this, std::ref(this->camDriver[i]), i, sleep_time);
 		inferThreads[i] = thread(&Prossess::DetectPerson, this, i, camParams[i].windowName, false, sleep_time);
@@ -239,9 +237,9 @@ int Prossess::peopleMonitorRelease() {
 }
 
 int Prossess::sysIni() {
+	
 	std::thread t1(tcpInit, std::ref(tcp_s), 6666, "127.0.0.1");
 	std::thread t2(tcpInit, std::ref(tcp_shangwei), 8888, "127.0.0.1");
-	//tcp_s.openServer(6666, "127.0.0.1");
 	loadParams();
 	monitor.dangerous_result.resize(danger_roi.size());
 	monitor.warning_result.resize(warning_roi.size());
@@ -265,8 +263,9 @@ int Prossess::sysIni() {
 		cout << "加载模型失败，请确认模型路径是否正确！" << endl;
 		return 0;
 	}
-	t1.join();
 	t2.join();
+	t1.join();
+	
 	//iniSocket();
 	return 1;
 }
@@ -294,17 +293,17 @@ void Prossess::printMonitorData() {
 	//	}
 	//}
 	int grade = 0;
-	/*int msg_num = 5 + 3 * monitor.which_camera.size();
-	char msg[1024];
-	msg[0] = 0xb2;
-	cout << "num: " << msg_num << endl;
-	msg[1] = msg_num;
-	msg[2] = monitor.which_camera.size();*/
+	//int msg_num = 5 + 3 * monitor.which_camera.size();
+	//char msg[1024];
+	//msg[0] = 0xb2;
+	//cout << "num: " << msg_num << endl;
+	//msg[1] = msg_num;
+	//msg[2] = monitor.which_camera.size();
 	for (int i = 0; i < monitor.dangerous_grade.size(); i++) {
 		//msg[i * 3 + 3] = monitor.dangerous_grade[i];
 		int warning_person_num = 0;
 		int dangerous_person_num = 0;
-		int area = 128;
+		//int area = 128;
 		if (monitor.dangerous_grade[i]) {
 			if (monitor.dangerous_grade[i] > grade) {
 				grade = monitor.dangerous_grade[i];
@@ -314,7 +313,7 @@ void Prossess::printMonitorData() {
 				cout << " 的警告区域";
 				cout << "中共出现 " << monitor.warning_result[i].person_num << "个人" << endl;
 				warning_person_num += monitor.warning_result[i].person_num;
-				area += 1;
+				//area += 1;
 			}
 			else if (monitor.dangerous_grade[i] == 2) {
 				cout << " 危险区域编号：";
@@ -329,33 +328,39 @@ void Prossess::printMonitorData() {
 		}
 		//msg[i * 3 + 4] = area;
 		int person_num = warning_person_num + dangerous_person_num;
-		std::string my_str;  // 模拟当前服务器本地数据
-		std::string rev_str;  // 从另一台视觉服务器接收数据
+		std::string rev_str;
 		tcp_s.RecvStr(rev_str);
-		if (rev_str == "safe" && person_num == 0) {
-			my_str = "safe";
-			tcp_shangwei.SendStr(my_str);
+		size_t start = rev_str.find('{');
+		size_t end = rev_str.find('}', start + 1);
+		std::string result;
+		if (start != std::string::npos && end != std::string::npos) {
+			// 提取子字符串（跳过 '{'，长度为 end - start - 1）
+			result = rev_str.substr(start + 1, end - start - 1);
 		}
-		else if (dangerous_person_num != 0 || rev_str == "danger") {
-			my_str = "danger";
-			tcp_shangwei.SendStr(my_str);
+		cout << result << endl;
+		if (person_num == 0 && result == "safe") {
+			std::string send_str = "{safe}\0";
+			tcp_shangwei.SendStr(send_str);
+		}
+		else if (dangerous_person_num != 0 || result == "danger") {
+			std::string send_str = "{danger}\0";
+			tcp_shangwei.SendStr(send_str);
 		}
 		else {
-			my_str = "warning";
-			tcp_shangwei.SendStr(my_str);
+			std::string send_str = "{warning}\0";
+			tcp_shangwei.SendStr(send_str);
 		}
-		
-		
+		//msg[i * 3 + 5] = person_num;
 	}
-	//msg[i * 3 + 5] = person_num;
-	/*msg[msg_num - 2] = 0x11;
-	msg[msg_num - 1] = 0x01;
-	tcp_s.printHex(msg, 11);
-	tcp_s.SendChar(msg, msg_num);*/
-	//myUdpSrv.sendChar(msg,msg_num);
+	//msg[msg_num - 2] = 0x11;
+	//msg[msg_num - 1] = 0x01;
+	////tcp_s.printHex(msg, 11);
+	//tcp_s.SendChar(msg, msg_num);
+	////myUdpSrv.sendChar(msg,msg_num);
+
 }
 
-// 计算多边形面积函数
+// 假设的计算多边形面积函数
 double Prossess::ComputeArea(const vector<_Point>& points)
 {
 	double area = 0.0;
@@ -387,13 +392,12 @@ void Prossess::DrawRegion(Mat& image, vector<_Point>AlarmPoints, vector<DangerRo
 
 int Prossess::InitModel(string model_path, bool isCuda)//输入模型的路径，以及设置是否开启GPU
 {
-	// 有几个相机就初始化几个模型，一个模型对应一个相机的推理
 	for (int i = 0; i < camParams.size(); ++i)
 	{
 		bool initModel = task_detect_onnx.ReadModel(net[i], model_path, isCuda);
 		if (initModel)  // 加载模型，打印是否成功，若使用 GPU 改成 true，若使用 CPU 改成 false
 		{
-			std::cout << "net：" << i << "read ok!" << std::endl;
+			//std::cout << "net：" << i << "read ok!" << std::endl;
 		}
 		else
 		{
@@ -408,12 +412,13 @@ void Prossess::GrabImage(HK_camera& camera, int camIndex, int sleepTime) {
 	cv::Mat image;
 	while (cv::waitKey(1) < 0) {
 		camera.grabRGBImage(&image);
+	
 		if (imageQueue[camIndex].size() >= maxQueueSize) {
 			// 如果队列已满，等待一段时间直到队列有空间
 			Sleep(10);
 			continue;
 		}
-		unique_lock<mutex> lock(mtx[camIndex]); // 线程保护，只有一个线程能访问image
+		unique_lock<mutex> lock(mtx[camIndex]);
 		imageQueue[camIndex].push(image);
 		lock.unlock();
 		Imagecv[camIndex].notify_one();
@@ -429,6 +434,15 @@ void Prossess::DetectPerson(int camIndex, const string& windowName, bool saveIma
 			Imagecv[camIndex].wait(lock, [&] { return !imageQueue[camIndex].empty(); });
 			cv::Mat img_camera = imageQueue[camIndex].front();
 
+			// 采集数据
+			int flag = 1;
+
+			if (flag) {
+				string file_name = "E:/pic2/cam" + to_string(camIndex) + "/" + "20250304_" + to_string(camIndex) + to_string(myflag + 1) + ".jpg";
+				cv::imwrite(file_name, img_camera);
+				myflag++;
+				Sleep(2000);
+			}
 			//if (camIndex == 0) {
 			//	string file_name = "datas/left/left" + to_string(left_num)+".png";
 			//	cv::imwrite(file_name, img_camera);
@@ -448,6 +462,7 @@ void Prossess::DetectPerson(int camIndex, const string& windowName, bool saveIma
 				LARGE_INTEGER t1, t2, tc;
 				QueryPerformanceFrequency(&tc);
 				QueryPerformanceCounter(&t1);
+				
 				if (task_detect_onnx.Detect(img_camera, net[camIndex], result[camIndex], conf, iou))
 				{
 					// 在每次检测开始前清空前次检测结果
@@ -548,14 +563,14 @@ void Prossess::DetectPerson(int camIndex, const string& windowName, bool saveIma
 
 int main() {
 	Prossess proseess;
-	// 每个相机都读取了一次模型
 	if (proseess.sysIni()) {
 	loop:
 		int res = proseess.iniPeopleMonitor();//行人监控初始化
+		//int res = 0;
 		if (res == 0) {
 			while (true) {
 				proseess.printMonitorData();//打印行人检测结果
-				Sleep(proseess.sleep_time); // 等待20毫秒
+				Sleep(500); 
 			}
 		}
 		else {
@@ -563,6 +578,6 @@ int main() {
 		}
 		system("pause");
 	}
-	return 0;
+
 }
 
