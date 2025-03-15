@@ -154,7 +154,7 @@ int Prossess::loadParams() {
 	//else {
 	//	return 0;
 	//}		 
-	camParams = { 
+	camParams = {
 		{
 			"192.168.8.145",
 			"admin",
@@ -168,7 +168,7 @@ int Prossess::loadParams() {
 			"jkrobot2022",
 			8000,
 			"camera2"
-		} 
+		}
 	};
 	// TODO: 5个的参数
 
@@ -235,9 +235,9 @@ int Prossess::peopleMonitorRelease() {
 }
 
 int Prossess::sysIni() {
-	//tcp_s.openServer(6666, "127.0.0.1");
+	
 	int port = 6666;
-	TcpClient cli;
+	
 	int connfd = cli.createsocket(port);
 	if (connfd < 0) {
 		return -1;
@@ -281,9 +281,7 @@ int Prossess::sysIni() {
 		return 0;
 	}
 
-	// TODO：模拟客户端视觉服务器发消息给主控服务器
 	
-	//iniSocket();
 	return 1;
 }
 
@@ -347,18 +345,17 @@ void Prossess::printMonitorData() {
 		int person_num = warning_person_num + dangerous_person_num;
 
 		//TODO：发送危险信号给服务器
-		std::string str;
 		if (dangerous_person_num != 0) {
-			str = "danger";
-			cli.send(str);
+			std::string send_str = "{danger}\0";
+			cli.send(send_str);
 		}
-		else if (warning_person_num != 0) {
-			str = "warning";
-			cli.send(str);
+		else if (dangerous_person_num == 0 && warning_person_num != 0) {
+			std::string send_str = "{warning}\0";
+			cli.send(send_str);
 		}
 		else {
-			str = "safe";
-			cli.send(str);
+			std::string send_str = "{safe}\0";
+			cli.send(send_str);
 		}
 		//msg[i * 3 + 5] = person_num;
 	}
@@ -546,12 +543,12 @@ void Prossess::DetectPerson(int camIndex, const string& windowName, bool saveIma
 				resize(mask_img, mask_img, Size(640, 480));
 				QueryPerformanceCounter(&t2);
 				double time = (double)(t2.QuadPart - t1.QuadPart) / (double)tc.QuadPart;
-				cout << "time = " << time*1000.0 << endl;  //输出时间（单位：ｓ）
+				cout << "time = " << time * 1000.0 << endl;  //输出时间（单位：ｓ）
 				cv::imshow(windowName, mask_img);
 				cv::waitKey(1);
 				Sleep(sleepTime);
 			}
-			else { 
+			else {
 				cout << "image is empty" << endl;
 			}
 		}
@@ -567,6 +564,7 @@ int main() {
 	if (proseess.sysIni()) {
 	loop:
 		int res = proseess.iniPeopleMonitor();//行人监控初始化
+		//int res = 0;
 		if (res == 0) {
 			while (true) {
 				proseess.printMonitorData();// 同步实时打印行人检测结果 ，感觉在这里传递消息或者是detectPerson函数里面，都可
@@ -577,7 +575,6 @@ int main() {
 			goto loop;
 		}
 		system("pause");
-	}	
+	}
 	return 0;
 }
-
